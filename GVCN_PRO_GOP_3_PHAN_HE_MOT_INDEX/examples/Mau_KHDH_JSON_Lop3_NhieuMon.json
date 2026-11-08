@@ -1,0 +1,39 @@
+{
+  "schoolYear": "2026-2027",
+  "grade": 3,
+  "subjects": [
+    {
+      "subjectId": "tieng-viet",
+      "subject": "Tiếng Việt",
+      "topics": [
+        {
+          "topicName": "Những trải nghiệm thú vị",
+          "lessons": [
+            { "lessonNumber": 1, "lessonName": "Ngày gặp lại", "periods": 3, "periodStart": 1, "periodEnd": 3 },
+            { "lessonNumber": 2, "lessonName": "Về thăm quê", "periods": 4, "periodStart": 4, "periodEnd": 7 },
+            { "lessonNumber": 3, "lessonName": "Cánh rừng trong nắng", "periods": 3, "periodStart": 8, "periodEnd": 10 }
+          ]
+        },
+        {
+          "topicName": "Chủ đề minh họa tháng 10",
+          "lessons": [
+            { "lessonNumber": 9, "lessonName": "Bài minh họa theo thứ tự tiết", "periods": 4, "periodStart": 29, "periodEnd": 32 }
+          ]
+        }
+      ]
+    },
+    {
+      "subjectId": "toan",
+      "subject": "Toán",
+      "topics": [
+        {
+          "topicName": "Các phép tính",
+          "lessons": [
+            { "lessonName": "Bài minh họa tuần 1", "periods": 5, "periodStart": 1, "periodEnd": 5 },
+            { "lessonName": "Bài minh họa tháng 10", "periods": 5, "periodStart": 21, "periodEnd": 25, "month": 10 }
+          ]
+        }
+      ]
+    }
+  ]
+}
