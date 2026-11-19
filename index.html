@@ -1600,7 +1600,7 @@
             settings: { sidebarPosition: 'left', deductStarsOnRedeem: true },
             settingsTab: 'thong-tin',
             students: [], // Đã thêm khởi tạo mảng học sinh để tránh lỗi
-            wheelParticipants: {}, // Danh sách sao chép, độc lập cho từng trò chơi Vòng quay
+            wheelParticipants: {}, // Danh sách sao chép, độc lập cho từng trò trong mục Gọi Tên Ngẫu Nhiên
             groups: [
                 { id: "g1", name: "Tổ 1", color: "text-red-500", avatarUrl: "" },
                 { id: "g2", name: "Tổ 2", color: "text-green-500", avatarUrl: "" },
@@ -1653,6 +1653,7 @@
         let isTimerRunning = false;
         let isDataLoaded = false;
 
+        const randomNameMenuLabel = 'Gọi Tên Ngẫu Nhiên';
         const menuItems = [
             { id: 'tong-quan', icon: 'ph-squares-four', label: 'Tổng quan' },
             { id: 'hoc-sinh', icon: 'ph-users', label: 'Học sinh' },
@@ -1662,7 +1663,7 @@
             { id: 'diem-danh', icon: 'ph-calendar-check', label: 'Điểm danh' },
             { id: 'xep-hang', icon: 'ph-trophy', label: 'Tuyên Dương' },
             { id: 'bao-cao', icon: 'ph-chart-bar', label: 'Sổ theo dõi' },
-            { id: 'vong-quay', icon: 'ph-magic-wand', label: 'Vòng quay' },
+            { id: 'vong-quay', icon: 'ph-magic-wand', label: randomNameMenuLabel },
             { id: 'game-menu', icon: 'ph-game-controller', label: 'Góc Trò Chơi' },
             { id: 'nhan-xet', icon: 'ph-note-pencil', label: 'Nhận xét' },
             { id: 'cai-dat', icon: 'ph-gear', label: 'Cài đặt' }
@@ -12605,7 +12606,7 @@ Mỗi câu phải có đúng 4 lựa chọn khác nhau và duy nhất 1 đáp á
 
         function changeAttendanceDate(d) { if(d) { currentAttendanceDate = d; renderLayout(); } }
 
-        // ================= VÒNG QUAY: DANH SÁCH RIÊNG =================
+        // ================= GỌI TÊN NGẪU NHIÊN: DANH SÁCH RIÊNG =================
         // Không ghi, xóa, sắp xếp hay chỉnh sửa state.students trong các thao tác dưới đây.
         const WHEEL_LABELS={wheel:'Vòng quay gọi tên',stage:'Sân khấu ngẫu nhiên',duck:'Đua vịt','phi-thuyen':'Phi thuyền bắt người','may-gap':'Máy gắp thú','cau-ca':'Câu cá vàng','long-cau':'Lồng cầu may mắn'};
         const WHEEL_IDS = Object.keys(WHEEL_LABELS);
@@ -12780,7 +12781,7 @@ Mỗi câu phải có đúng 4 lựa chọn khác nhau và duy nhất 1 đáp á
         window.wheelRewardParticipant=function(id){
             const entry=wheelRoster().find(s=>String(s.id)===String(id));
             const student=wheelSharedStudent(entry);
-            if(!student)return showToast('Học sinh chỉ có trong Vòng quay, chưa có hồ sơ chung để tích điểm.','error');
+            if(!student)return showToast(`Học sinh chỉ có trong mục ${randomNameMenuLabel}, chưa có hồ sơ chung để tích điểm.`,'error');
             switchTab('tich-diem');selectStudentForPoints(student.id);
         };
         function wheelCanEdit(){
@@ -12877,7 +12878,7 @@ Mỗi câu phải có đúng 4 lựa chọn khác nhau và duy nhất 1 đáp á
                 if(!confirm(`Thay danh sách ${WHEEL_LABELS[id]} bằng ${result.length} học sinh từ Excel? Hồ sơ chung vẫn giữ nguyên.`))return;
                 state.wheelParticipants[id]=result;
                 await saveData();renderLayout();showToast(`Đã nhập ${result.length} học sinh vào ${WHEEL_LABELS[id]}; không thay đổi hồ sơ chung.`,'success');
-            }catch(error){console.error(error);showToast(`Không nhập được DS Vòng quay: ${error?.message||error}`,'error');}
+            }catch(error){console.error(error);showToast(`Không nhập được danh sách trong mục ${randomNameMenuLabel}: ${error?.message||error}`,'error');}
             finally{if(input)input.value='';}
         };
         window.wheelOpenDeleteDialog=function(){
@@ -12947,9 +12948,9 @@ Mỗi câu phải có đúng 4 lựa chọn khác nhau và duy nhất 1 đáp á
                 <div class="flex flex-col items-center w-full max-w-6xl mx-auto mb-4 gap-3 relative z-10">
                     <div class="flex items-center gap-3">
                         <i class="ph-fill ph-magic-wand text-3xl text-amber-400"></i>
-                        <h2 class="text-3xl font-black text-indigo-950 uppercase tracking-tight font-display">GỌI TÊN NGẪU NHIÊN</h2>
+                        <h2 class="text-3xl font-black text-indigo-950 tracking-tight font-display">${randomNameMenuLabel}</h2>
                     </div>
-                    <nav class="wheel-game-nav font-display" id="wheel-game-nav" aria-label="Chọn trò chơi Vòng quay">${gameButtons}</nav>
+                    <nav class="wheel-game-nav font-display" id="wheel-game-nav" aria-label="Chọn trò chơi trong mục ${randomNameMenuLabel}">${gameButtons}</nav>
                 </div>
                 ${wheelRosterToolbar()}
             `;
