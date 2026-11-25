@@ -11298,8 +11298,50 @@ Mỗi câu phải có đúng 4 lựa chọn khác nhau và duy nhất 1 đáp á
             ctx.fillText('Nhấn Bắt Đầu ở góc trên bên phải', canvas.width/2, canvas.height/2);
         };
 
+        // DOWNLOAD_OFFLINE_BRIDGE: snapshot only selected game content and display names.
+        window.gvcnGetOfflineItem = function(id, source = 'questions') {
+            const studentNames = (state.students || []).map(student => String(student.name || '')).filter(Boolean);
+            if (wheelIsEmbeddedGame(id)) return {names: wheelGameNames(id)};
+            if (['wheel', 'stage', 'duck'].includes(id)) {
+                const targetGroups = id === 'wheel' ? wheelMode === 'group'
+                    : id === 'stage' && stageSettings.target === 'group';
+                const roster = Array.isArray(state.wheelParticipants?.[id])
+                    ? state.wheelParticipants[id] : (state.students || []);
+                return {
+                    names: (targetGroups ? state.groups || [] : roster).map(entry => String(entry.name || '')).filter(Boolean),
+                    settings: id === 'stage' ? {duration:stageSettings.duration} : {duration:id === 'duck' ? 7 : 5}
+                };
+            }
+            const stateKeys = {
+                'keo-co-kien': 'keoCoGame',
+                'quizz-nghieng-dau': 'headTiltGame',
+                'quet-the-qr': 'qrQuizGame',
+                'ngon-tay-than-ky': 'magicFingerGame',
+                'space-race': 'spaceRaceGame',
+                'millionaire': 'millionaireGame',
+                'mine-expert': 'mineExpertGame'
+            };
+            const game = state[stateKeys[id]];
+            if (!game) throw new Error('Hãy mở trò chơi và chuẩn bị bộ câu hỏi trước khi tải.');
+            const settings = game.settings || {};
+            let teams = [settings.team1Name || 'Đội 1', settings.team2Name || 'Đội 2'];
+            if (id === 'space-race') {
+                teams = settings.playerMode === 'team'
+                    ? (settings.selectedTeamNames || []).slice(0,2)
+                    : (settings.selectedPlayerIds || []).slice(0,2).map(playerId =>
+                        (state.students || []).find(student => String(student.id) === String(playerId))?.name || 'Người chơi');
+            }
+            while (teams.length < 2) teams.push('Đội ' + (teams.length + 1));
+            return {
+                questions: JSON.parse(JSON.stringify(source === 'library' ? game.questionLibrary || [] : game.questions || [])),
+                names: id === 'quet-the-qr' ? studentNames : [],
+                teams,
+                settings: JSON.parse(JSON.stringify(settings))
+            };
+        };
+
         function renderViewGameMenu() {
-            if (!getGameGeminiApiKey()) return renderGameApiGateHtml();
+            if (!getGameGeminiApiKey()) return renderGameApiGateHtml() + window.offlineDownloadButtons(['keo-co-kien','quizz-nghieng-dau','quet-the-qr','ngon-tay-than-ky','space-race','millionaire','mine-expert']);
             return `
                 <div class="max-w-7xl mx-auto space-y-6 animate-fade-in pb-12 pt-4 flex flex-col h-full">
                     <!-- Header -->
@@ -11339,6 +11381,7 @@ Mỗi câu phải có đúng 4 lựa chọn khác nhau và duy nhất 1 đáp á
                         </button>
                     </div>
 
+                    ${window.offlineDownloadButtons(['keo-co-kien','quizz-nghieng-dau','quet-the-qr','ngon-tay-than-ky','space-race','millionaire','mine-expert'])}
                     <!-- Game Container -->
                     <div class="flex-1 bg-white rounded-[2rem] border border-slate-200 shadow-sm relative overflow-auto custom-scrollbar flex flex-col p-2 min-h-[500px]">
                         <div id="game-mount-point" class="w-full h-full min-h-[500px] rounded-[1.5rem] bg-slate-50 relative flex items-center justify-center">
@@ -13010,6 +13053,7 @@ Mỗi câu phải có đúng 4 lựa chọn khác nhau và duy nhất 1 đáp á
                     <nav class="wheel-game-nav font-display" id="wheel-game-nav" aria-label="Chọn trò chơi trong mục ${randomNameMenuLabel}">${gameButtons}</nav>
                 </div>
                 ${wheelRosterToolbar()}
+                ${window.offlineDownloadButtons([vongQuayTab])}
             `;
 
             if (wheelIsEmbeddedGame()) return renderWheelEmbeddedGame(headerHtml);
@@ -16442,5 +16486,6 @@ Mỗi câu phải có đúng 4 lựa chọn khác nhau và duy nhất 1 đáp á
 })();
 </script>
 
+<script src="./assets/offline-export.js"></script>
 </body>
 </html>
