@@ -1,0 +1,20 @@
+CHƠI TRÒ HTML TRONG SLIDE POWERPOINT
+
+Chuẩn bị một lần trên từng máy trình chiếu
+1. Dùng PowerPoint desktop hỗ trợ Content Add-ins và được phép cài add-in riêng. Cài Python 3 và công cụ mkcert (https://github.com/FiloSottile/mkcert) từ trước khi đi dạy. Nếu máy trường do quản trị viên quản lý, nhờ quản trị viên chuẩn bị chứng chỉ HTTPS localhost và triển khai manifest.
+2. Mở Terminal hoặc PowerShell trong thư mục PowerPoint cạnh index.html của app. Tạo chứng chỉ tin cậy trên máy bằng hai lệnh:
+   mkcert -install
+   mkcert -cert-file localhost.pem -key-file localhost-key.pem localhost 127.0.0.1
+   Giữ các khóa riêng trên máy. Tạo chứng chỉ riêng trên mỗi máy.
+3. Mỗi buổi dạy, từ thư mục này chạy python3 chay.py (macOS) hoặc py -3 chay.py (Windows). Giữ cửa sổ mở. Dịch vụ chỉ lắng nghe trên máy này. Nếu báo cổng đang dùng, kiểm tra xem đã chạy một bản chưa.
+
+Chèn trò vào bài giảng
+1. Trong app, bấm “Chèn vào PowerPoint” ở trò cần dùng, giải nén gói đã tải. Chép tệp HTML vào thư mục PowerPoint/tro-choi, giữ đúng tên tệp. Mỗi lần xuất tạo một trò độc lập gồm nội dung và danh sách lúc xuất.
+2. Trên Mac, thoát PowerPoint. Trong Finder bấm Command+Shift+G, mở ~/Library/Containers/com.microsoft.Powerpoint/Data/Documents/wef (tạo thư mục wef nếu cần), chép tệp XML vào đó. Mở lại PowerPoint, vào Home hoặc Insert → Add-ins → My Add-ins, chọn tên trò trong Developer Add-ins.
+3. Trên Windows, đặt XML vào thư mục danh mục add-in đã chia sẻ. Trong PowerPoint vào File → Options → Trust Center → Trust Center Settings → Trusted Add-in Catalogs, thêm đường dẫn mạng của thư mục, bật Show in Menu, khởi động lại PowerPoint. Vào Home hoặc Insert → Add-ins → My Add-ins → Shared Folder, chọn trò. Quản trị viên có thể cấp add-in tập trung theo quy định của trường.
+4. Chọn đúng slide trước khi chèn, kéo các góc của khung trò chơi để chỉnh kích thước, lưu bài giảng và chạy Slide Show. Bấm nút chơi trong khung. Có thể chèn nhiều trò khác nhau vào cùng bài.
+5. Khi chuyển máy, mang theo các tệp HTML và XML tương ứng cùng bài giảng. Lặp lại phần chuẩn bị, cài add-in và chạy dịch vụ trên máy đó. Chạy thử trên đúng máy với mạng ngắt trước buổi dạy. Một số chính sách Office cần mạng để đăng nhập hoặc xác thực add-in.
+
+Tài liệu Microsoft
+https://learn.microsoft.com/en-us/office/dev/add-ins/testing/sideload-an-office-add-in-on-mac
+https://learn.microsoft.com/en-us/office/dev/add-ins/testing/create-a-network-shared-folder-catalog-for-task-pane-and-content-add-ins

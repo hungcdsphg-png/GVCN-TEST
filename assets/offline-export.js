@@ -20,9 +20,6 @@
     stage: { title: 'Sân khấu ngẫu nhiên', icon: '🎭', kind: 'stage' },
     duck: { title: 'Đua vịt', icon: '🦆', kind: 'duck' }
   });
-  let pending = null;
-  let busy = false;
-  let pptLibrary = null;
   const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const jsonForHtml = data => JSON.stringify(data).replace(/</g, () => String.fromCharCode(92) + 'u003c');
   function filename(data, extension) {
@@ -37,16 +34,6 @@
     link.click();
     link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 60000);
-  }
-  function shuffled(values) {
-    const copy = values.slice();
-    for (let i = copy.length - 1; i > 0; i--) {
-      const buffer = new Uint32Array(1);
-      crypto.getRandomValues(buffer);
-      const j = Math.floor(buffer[0] / 4294967296 * (i + 1));
-      [copy[i], copy[j]] = [copy[j], copy[i]];
-    }
-    return copy;
   }
   function normalizeExport(id, raw) {
     const meta = games[id];
@@ -82,40 +69,13 @@
     return data;
   }
   window.offlineDownloadButtons = function (ids) {
-    return '<div class="flex flex-wrap gap-2 my-3" aria-label="Tải từng mục chơi offline">' + ids.map(id => {
+    const questions = ids.some(id => !['wheel','stage','duck','embedded'].includes(games[id].kind));
+    const picker = questions ? '<label>Nguồn câu hỏi <select id="offline-source"><option value="">Bộ đang dùng (dùng thư viện nếu trống)</option><option value="library">Thư viện câu hỏi</option></select></label>' : '';
+    return picker + '<div class="flex flex-wrap gap-2 my-3" aria-label="Tải từng mục chơi offline">' + ids.map(id => {
       const game = games[id];
-      return '<button type="button" onclick="openOfflineExport(\'' + id + '\')" class="px-3 py-2 bg-white text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold hover:bg-indigo-50">' + game.icon + ' Tải ' + escape(game.title) + '</button>';
+      return '<button type="button" onclick="downloadGameHtml(\'' + id + '\')" class="px-3 py-2 bg-white text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold hover:bg-indigo-50">' + game.icon + ' Tải HTML · ' + escape(game.title) + '</button><button type="button" class="px-3 py-2 text-indigo-800 border rounded-xl text-xs font-bold" onclick="downloadSlideGame(\'' + id + '\')">Chèn vào PowerPoint · ' + escape(game.title) + '</button>';
     }).join('') + '</div>';
   };
-  window.closeOfflineExport = function () {
-    if (busy) return;
-    document.getElementById('offline-export-dialog')?.remove();
-    pending = null;
-  };
-  window.openOfflineExport = function (id) {
-    if (!games[id] || busy) return;
-    document.getElementById('offline-export-dialog')?.remove();
-    pending = id;
-    const naming = ['wheel', 'stage', 'duck','embedded'].includes(games[id].kind);
-    const dialog = document.createElement('div');
-    dialog.id = 'offline-export-dialog';
-    dialog.className = 'fixed inset-0 z-[9999] bg-slate-900/70 flex items-center justify-center p-4';
-    dialog.innerHTML = '<section role="dialog" aria-modal="true" aria-labelledby="offline-export-title" class="bg-white rounded-2xl p-6 max-w-2xl w-full shadow-2xl">' +
-      '<h2 id="offline-export-title" class="text-xl font-black text-indigo-950">' + escape(games[id].title) + ' · Tải xuống</h2>' +
-      '<p class="mt-3 text-sm text-slate-700">HTML là bản chơi độc lập bằng trình duyệt khi mất mạng. PowerPoint là bản chuyển thể dùng câu hỏi và thẻ bấm trong chế độ trình chiếu.</p>' +
-      '<p class="mt-2 text-sm text-slate-700">' + (naming
-        ? 'HTML chọn ngẫu nhiên mỗi lượt. PowerPoint trộn tên khi tải và đặt sau thẻ úp số; bấm thẻ để gọi tên. Tải lại để trộn lại thứ tự.'
-        : 'Bản tải dùng chuột hoặc bàn phím để trả lời. Với Quét thẻ QR, chọn học sinh rồi ghi nhận đáp án trên máy. Hiệu ứng và luật được rút gọn cho bản tải.') + '</p>' +
-      (!naming ? '<label class="block mt-4 text-sm font-bold">Nguồn câu hỏi <select id="offline-question-source" class="ml-2 border rounded p-2"><option value="questions">Bộ câu hỏi đang dùng</option><option value="library">Toàn bộ Thư viện của trò này</option></select></label>' : '') +
-      '<p class="mt-3 text-xs text-slate-500">File mang theo nội dung và tên được chọn. Khi chia sẻ file, người nhận cũng xem được các dữ liệu này. PowerPoint cần hỗ trợ liên kết giữa các slide; hiệu ứng có thể khác giữa các phiên bản.</p>' +
-      '<div id="offline-export-status" role="status" class="mt-3 text-sm text-rose-700"></div>' +
-      '<div class="mt-5 flex flex-wrap gap-3"><button data-export-format="html" onclick="downloadOfflineItem(\'html\')" class="px-4 py-3 rounded-xl bg-indigo-600 text-white font-bold">Tải HTML offline</button>' +
-      '<button data-export-format="pptx" onclick="downloadOfflineItem(\'pptx\')" class="px-4 py-3 rounded-xl bg-orange-600 text-white font-bold">Tải PowerPoint (.pptx)</button>' +
-      '<button onclick="closeOfflineExport()" class="px-4 py-3 rounded-xl bg-slate-100 font-bold">Đóng</button></div></section>';
-    document.body.appendChild(dialog);
-    dialog.querySelector('button').focus();
-  };
-
   const offlineStyles = `
 *{box-sizing:border-box}body{margin:0;background:#0e1534;color:#fff;font:18px Arial,sans-serif}
 header,main{max-width:1100px;margin:auto;padding:22px}header{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
@@ -388,120 +348,42 @@ label{display:flex;align-items:center;gap:8px}#floaters{height:200px;overflow:hi
       '</title><style>' + offlineStyles + '</style></head><body><header><div class="grow"><h1 id="title"></h1><p id="subtitle" class="muted"></p></div><label><input type="checkbox" id="sound">Âm thanh</label><button id="full">Toàn màn hình</button></header>' +
       '<main><p class="muted">' + note + '</p><div id="main"></div></main><script>(' + offlinePlayer.toString() + ')(' + jsonForHtml(data) + ');<\/script></body></html>';
   }
-  async function ensurePptLibrary() {
-    if (window.PptxGenJS) return;
-    if (!pptLibrary) pptLibrary = new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = './assets/vendor/pptxgen.bundle.js';
-      script.onload = () => window.PptxGenJS ? resolve() : reject(new Error('Thư viện PowerPoint chưa sẵn sàng.'));
-      script.onerror = () => { script.remove(); pptLibrary = null; reject(new Error('Không tải được thư viện PowerPoint. Kiểm tra tệp assets/vendor/pptxgen.bundle.js.')); };
-      document.head.appendChild(script);
-    });
-    await pptLibrary;
-  }
-  function buildPresentation(data, Pptx) {
-    const ppt = new Pptx();
-    ppt.layout = 'LAYOUT_WIDE';
-    ppt.author = 'GVCN PRO';
-    ppt.subject = data.title;
-    ppt.title = data.title;
-    ppt.lang = 'vi-VN';
-    const color = { bg: '0E1534', panel: '233462', gold: 'FBBF24', text: 'FFFFFF', muted: 'B8C8E8' };
-    ppt.theme = { headFontFace: 'Arial', bodyFontFace: 'Arial', lang: 'vi-VN' };
-    const addText = (slide, text, x, y, w, h, options = {}) => slide.addText(String(text), {
-      x, y, w, h, fontFace: 'Arial', fontSize: 24, color: color.text, margin: .12, breakLine: false,
-      fit: 'shrink', valign: 'mid', ...options
-    });
-    function page(title) {
-      const slide = ppt.addSlide();
-      slide.background = { color: color.bg };
-      addText(slide, title, .5, .22, 12.3, .7, { bold: true, fontSize: 30, color: color.gold });
-      return slide;
-    }
-    function button(slide, text, x, y, w, h, target, options = {}) {
-      slide.addShape(ppt.ShapeType.roundRect, { x, y, w, h, radius: .12, fill: { color: color.panel }, line: { color: '52679E', width: 1 }, hyperlink: { slide: target } });
-      addText(slide, text, x + .05, y + .03, w - .1, h - .06, { fontSize: 22, bold: true, hyperlink: { slide: target }, ...options });
-    }
-    const namesGame = ['wheel', 'stage', 'duck','embedded'].includes(data.kind);
-    const start = page(data.title);
-    addText(start, data.subtitle, .6, 1.05, 12, .7, { color: color.muted, fontSize: 22 });
-    addText(start, namesGame
-      ? 'Các tên đã được trộn khi tạo file. Bấm một thẻ số để mở tên, rồi quay lại bảng chọn.'
-      : 'Trình chiếu và bấm đáp án. Đáp án sai có nút thử lại. Có thể chọn câu hỏi từ bảng.', .8, 2.05, 11.7, 1.3, { fontSize: 26 });
-    addText(start, namesGame
-      ? 'PowerPoint dùng thẻ chọn. Tải lại từ app để trộn lại tên. Bản HTML hỗ trợ quay và đua ngẫu nhiên mỗi lượt.'
-      : 'Phiên bản bằng nút bấm. Giáo viên ghi điểm theo luật mong muốn. Trò camera dùng đáp án trên slide.', .8, 4, 11.7, 1.1, { fontSize: 20, color: color.muted });
-    button(start, 'BẮT ĐẦU', 4.3, 5.8, 4.7, .9, 2, { align: 'center', color: color.gold });
-    const items = namesGame ? shuffled(data.names) : (data.settings.shuffleQuestions ? shuffled(data.questions) : data.questions.slice());
-    const perPage = 20;
-    const menuPages = Math.ceil(items.length / perPage);
-    const menus = [];
-    for (let i = 0; i < menuPages; i++) {
-      const slide = page((namesGame ? 'Chọn thẻ' : 'Chọn câu hỏi') + ' · ' + (i + 1) + '/' + menuPages);
-      menus.push(slide);
-      button(slide, 'Trang đầu', .5, 6.55, 2.4, .6, 1, { fontSize: 18, align: 'center' });
-      if (i > 0) button(slide, 'Bảng trước', 6.2, 6.55, 2.5, .6, i + 1, { fontSize: 18, align: 'center' });
-      if (i < menuPages - 1) button(slide, 'Bảng tiếp', 9, 6.55, 2.5, .6, i + 3, { fontSize: 18, align: 'center' });
-    }
-    const firstItemSlide = 2 + menuPages;
-    let nextNumber = firstItemSlide;
-    items.forEach((item, index) => {
-      const menuIndex = Math.floor(index / perPage);
-      const menuNumber = 2 + menuIndex;
-      const tile = index % perPage;
-      button(menus[menuIndex], String(index + 1), .65 + tile % 5 * 2.45, 1.3 + Math.floor(tile / 5) * 1.2, 2.15, .95, nextNumber, { fontSize: 28, align: 'center' });
-      if (namesGame) {
-        const slide = page(data.title);
-        addText(slide, item, .75, 2.1, 11.8, 2.2, { fontSize: 52, bold: true, align: 'center' });
-        button(slide, 'Về bảng thẻ', 4.6, 5.7, 4.2, .9, menuNumber, { align: 'center' });
-        nextNumber++;
-      } else {
-        const question = { text: item.text, options: data.settings.shuffleAnswers ? shuffled(item.options) : item.options };
-        const questionNumber = nextNumber;
-        const correctNumber = nextNumber + 1;
-        const wrongNumber = nextNumber + 2;
-        const slide = page(data.title + ' · Câu ' + (index + 1));
-        addText(slide, question.text, .7, 1.1, 11.9, 1.8, { fontSize: question.text.length > 180 ? 24 : 32, bold: true });
-        question.options.forEach((option, i) => button(slide, 'ABCD'[i] + '. ' + option.text,
-          .7 + i % 2 * 6.1, 3.2 + Math.floor(i / 2) * 1.35, 5.8, 1.1, option.isCorrect ? correctNumber : wrongNumber,
-          { fontSize: option.text.length > 100 ? 18 : 24 }));
-        button(slide, 'Bảng câu hỏi', .7, 6.3, 3, .65, menuNumber, { fontSize: 18 });
-        const success = page('Chính xác');
-        addText(success, question.options.find(o => o.isCorrect).text, .8, 1.8, 11.7, 2, { fontSize: 38, color: 'A7F3D0', bold: true, align: 'center' });
-        button(success, 'Về bảng câu hỏi', .9, 5.5, 4.5, .95, menuNumber, { align: 'center' });
-        if (index < items.length - 1) button(success, 'Câu tiếp theo', 7.1, 5.5, 4.5, .95, questionNumber + 3, { align: 'center', color: color.gold });
-        const retry = page('Cùng suy nghĩ lại');
-        addText(retry, 'Hãy đọc lại câu hỏi và chọn một đáp án khác.', 1, 2, 11.3, 1.5, { fontSize: 34, align: 'center' });
-        button(retry, 'Thử lại câu này', 4.3, 5.2, 4.7, 1, questionNumber, { align: 'center' });
-        nextNumber += 3;
+  const SLIDE_GUIDE = "CHƠI TRÒ HTML TRONG SLIDE POWERPOINT\n\nChuẩn bị một lần trên từng máy trình chiếu\n1. Dùng PowerPoint desktop hỗ trợ Content Add-ins và được phép cài add-in riêng. Cài Python 3 và công cụ mkcert (https://github.com/FiloSottile/mkcert) từ trước khi đi dạy. Nếu máy trường do quản trị viên quản lý, nhờ quản trị viên chuẩn bị chứng chỉ HTTPS localhost và triển khai manifest.\n2. Mở Terminal hoặc PowerShell trong thư mục PowerPoint cạnh index.html của app. Tạo chứng chỉ tin cậy trên máy bằng hai lệnh:\n   mkcert -install\n   mkcert -cert-file localhost.pem -key-file localhost-key.pem localhost 127.0.0.1\n   Giữ các khóa riêng trên máy. Tạo chứng chỉ riêng trên mỗi máy.\n3. Mỗi buổi dạy, từ thư mục này chạy python3 chay.py (macOS) hoặc py -3 chay.py (Windows). Giữ cửa sổ mở. Dịch vụ chỉ lắng nghe trên máy này. Nếu báo cổng đang dùng, kiểm tra xem đã chạy một bản chưa.\n\nChèn trò vào bài giảng\n1. Trong app, bấm “Chèn vào PowerPoint” ở trò cần dùng, giải nén gói đã tải. Chép tệp HTML vào thư mục PowerPoint/tro-choi, giữ đúng tên tệp. Mỗi lần xuất tạo một trò độc lập gồm nội dung và danh sách lúc xuất.\n2. Trên Mac, thoát PowerPoint. Trong Finder bấm Command+Shift+G, mở ~/Library/Containers/com.microsoft.Powerpoint/Data/Documents/wef (tạo thư mục wef nếu cần), chép tệp XML vào đó. Mở lại PowerPoint, vào Home hoặc Insert → Add-ins → My Add-ins, chọn tên trò trong Developer Add-ins.\n3. Trên Windows, đặt XML vào thư mục danh mục add-in đã chia sẻ. Trong PowerPoint vào File → Options → Trust Center → Trust Center Settings → Trusted Add-in Catalogs, thêm đường dẫn mạng của thư mục, bật Show in Menu, khởi động lại PowerPoint. Vào Home hoặc Insert → Add-ins → My Add-ins → Shared Folder, chọn trò. Quản trị viên có thể cấp add-in tập trung theo quy định của trường.\n4. Chọn đúng slide trước khi chèn, kéo các góc của khung trò chơi để chỉnh kích thước, lưu bài giảng và chạy Slide Show. Bấm nút chơi trong khung. Có thể chèn nhiều trò khác nhau vào cùng bài.\n5. Khi chuyển máy, mang theo các tệp HTML và XML tương ứng cùng bài giảng. Lặp lại phần chuẩn bị, cài add-in và chạy dịch vụ trên máy đó. Chạy thử trên đúng máy với mạng ngắt trước buổi dạy. Một số chính sách Office cần mạng để đăng nhập hoặc xác thực add-in.\n\nTài liệu Microsoft\nhttps://learn.microsoft.com/en-us/office/dev/add-ins/testing/sideload-an-office-add-in-on-mac\nhttps://learn.microsoft.com/en-us/office/dev/add-ins/testing/create-a-network-shared-folder-catalog-for-task-pane-and-content-add-ins\n";
+  function selectedGame(id, source) {
+      source = source || document.getElementById('offline-source')?.value;
+      let raw = window.gvcnGetOfflineItem(id, source || 'questions');
+      if (!source && !raw.questions?.length && !['embedded','wheel','stage','duck'].includes(games[id].kind)) {
+        raw = window.gvcnGetOfflineItem(id, 'library');
       }
-    });
-    return ppt;
+      return normalizeExport(id, raw);
   }
-  window.downloadOfflineItem = async function (format) {
-    if (busy || !pending || !['html', 'pptx'].includes(format)) return;
-    const status = document.getElementById('offline-export-status');
-    busy = true;
-    document.querySelectorAll('#offline-export-dialog button').forEach(button => button.disabled = true);
+  window.downloadSlideGame = async function(id) {
     try {
-      status.textContent = 'Đang đóng gói…';
-      const source = document.getElementById('offline-question-source')?.value || 'questions';
-      const raw = window.gvcnGetOfflineItem(pending, source);
-      const data = normalizeExport(pending, raw);
-      if (format === 'html') saveBlob(new Blob([buildHtml(data)], { type: 'text/html;charset=utf-8' }), filename(data, 'html'));
-      else {
-        await ensurePptLibrary();
-        const ppt = buildPresentation(data, window.PptxGenJS);
-        await ppt.writeFile({ fileName: filename(data, 'pptx') });
-      }
-      status.textContent = 'Đã tạo file. HTML mở bằng trình duyệt; PPTX mở bằng PowerPoint rồi bật Trình chiếu.';
-    } catch (error) {
-      status.textContent = error.message || 'Không tạo được file. Hãy kiểm tra nội dung rồi thử lại.';
-    } finally {
-      busy = false;
-      document.querySelectorAll('#offline-export-dialog button').forEach(button => button.disabled = false);
+      const data = selectedGame(id);
+      const uid = crypto.randomUUID();
+      const title = escape(data.title + ' · ' + uid.slice(0, 8));
+      const url = 'https://localhost:43127/';
+      const manifest = `<?xml version="1.0" encoding="UTF-8"?>
+<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ContentApp">
+<Id>${uid}</Id><Version>1.0.0.0</Version><ProviderName>GVCN</ProviderName><DefaultLocale>vi-VN</DefaultLocale>
+<DisplayName DefaultValue="${title}"/><Description DefaultValue="Chơi trò GVCN trong slide"/>
+<IconUrl DefaultValue="${url}icon.png"/><Hosts><Host Name="Presentation"/></Hosts>
+<DefaultSettings><SourceLocation DefaultValue="${url}${uid}.html"/></DefaultSettings><Permissions>Restricted</Permissions></OfficeApp>`;
+      const zip = new JSZip();
+      zip.file(uid + '.html', buildHtml(data));
+      zip.file(filename(data, 'xml'), manifest);
+      zip.file('Huong-dan.txt', SLIDE_GUIDE);
+      saveBlob(await zip.generateAsync({type:'blob',compression:'DEFLATE'}), filename(data, 'zip'));
+    } catch(error) {
+      alert(error.message || 'Chưa xuất được trò chơi.');
     }
   };
-  // Exposed for validation and reuse, with no references to private app state.
-  window.GvcnOfflineExport = { normalizeExport, buildHtml, buildPresentation };
+  window.downloadGameHtml = function(id, source) {
+    try {
+      const data = selectedGame(id, source);
+      saveBlob(new Blob([buildHtml(data)], {type:'text/html;charset=utf-8'}), filename(data, 'html'));
+    } catch (error) {
+      alert(error.message || 'Chưa tải được trò chơi.');
+    }
+  };
 })();
